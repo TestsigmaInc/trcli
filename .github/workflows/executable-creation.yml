@@ -84,7 +84,14 @@ jobs:
   
       - name: Upload Executable to S3
         run: |
-            EXECUTABLE_PATH="dist/trcli-exe" 
+
+           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+                 EXECUTABLE_PATH="dist/trcli-exe" 
+            elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+                 EXECUTABLE_PATH="dist/trcli-exe" 
+             elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+                EXECUTABLE_PATH="dist/trcli-exe.exe" 
+            fi
+            shell: bash
             BUCKET_NAME="eks-common-bucket"
             aws s3 cp "$EXECUTABLE_PATH" s3://$BUCKET_NAME/trcli-executable/
-
