@@ -73,6 +73,8 @@ jobs:
               echo "APP_URL=https:\/\/${{ github.event.inputs.environment }}\.testsigma\.com" >> $GITHUB_ENV
             fi
 
+        shell: bash
+    
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
