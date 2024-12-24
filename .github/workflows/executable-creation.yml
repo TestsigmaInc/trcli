@@ -26,4 +26,10 @@ jobs:
         run:  |
           python -m pip install --upgrade pip
           pip install -r tests/requirements.txt
-        
+          pip install pyinstaller
+
+      - name: Create Executable Using Pyinstaller
+        run:  |
+          pyinstaller --onefile main.spec
+
+
