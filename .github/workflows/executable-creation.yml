@@ -40,24 +40,11 @@ jobs:
           pip install -r tests/requirements.txt
           pip install pyinstaller
 
-      # - name: Create Executable Using Pyinstaller
-      #   run:  |
-      #     ls
-      #     pwd
-      #     pyinstaller main.spec
-      #     ls dist
-
       - name: Create Executable Using Pyinstaller
         run: |
           ls
           pwd
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            pyinstaller main.spec
-          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-            pyinstaller main.spec
-          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-            pyinstaller --onefile main.spec
-          fi
+          pyinstaller main.spec
           ls dist
 
       - name: Set up environment variables
