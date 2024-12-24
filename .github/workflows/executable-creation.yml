@@ -45,11 +45,11 @@ jobs:
   
               if [ "${{ github.event.inputs.region }}" = "EU" ]; then
                 echo "AWS_DEFAULT_REGION=eu-west-1" >> $GITHUB_ENV
-                echo "EKS_COMMON_BUCKET=eks-common-bucket" >> $GITHUB_ENV
+                echo "9=eks-common-prod-bucket-eu" >> $GITHUB_ENV
                 echo "APP_URL=https:\/\/app-eu\.testsigma\.com" >> $GITHUB_ENV
               else
                 echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-                echo "EKS_COMMON_BUCKET=eks-common-bucke" >> $GITHUB_ENV
+                echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-eu" >> $GITHUB_ENV
                 echo "APP_URL=https:\/\/app\.testsigma\.com" >> $GITHUB_ENV
               fi
   
@@ -57,7 +57,7 @@ jobs:
               echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
               echo "AWS_ACCESS_KEY_ID=${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
               echo "AWS_SECRET_ACCESS_KEY=${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=hybrid-${{ github.event.inputs.environment }}.testsigma.com" >> $GITHUB_ENV
+              echo "EKS_COMMON_BUCKET=${{ github.event.inputs.environment }}.testsigma.com" >> $GITHUB_ENV
               echo "APP_URL=https:\/\/${{ github.event.inputs.environment }}\.testsigma\.com" >> $GITHUB_ENV
             fi
 
