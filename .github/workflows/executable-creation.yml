@@ -28,7 +28,7 @@ jobs:
           pip install -r tests/requirements.txt
           pip install pyinstaller
 
-      - name: Create Executable
+      - name: Create Executable Using Pyinstaller
         run:  |
           pyinstaller --onefile main.spec
 
