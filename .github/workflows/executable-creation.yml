@@ -30,6 +30,9 @@ jobs:
 
       - name: Create Executable Using Pyinstaller
         run:  |
-          pyinstaller --onefile main.spec
+          ls
+          pwd
+          pyinstaller main.spec
+          ls dist
 
-
+     
