@@ -17,12 +17,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
         arch: [amd64, arm64]
         include:
           - os: windows-latest
             name: windows
-          - os: ubuntu-latest
+          - os: ubuntu-20.04
             name: linux
           - os: macos-latest
             name: macos
@@ -46,6 +46,15 @@ jobs:
           pwd
           pyinstaller main.spec
           ls dist
+      
+      - name: Print Executable Version
+        run: |
+           if [ "${{ matrix.name }}" = "windows" ]; then
+              ./dist/trcli-exe.exe --help
+           else
+              ./dist/trcli-exe --help
+           fi
+        shell: bash
 
       - name: Set up environment variables
         run: |
@@ -78,7 +87,7 @@ jobs:
             aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
             aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
             aws-region: ${{ env.AWS_DEFAULT_REGION }}
-  
+
       - name: Upload Executable to S3
         run:
           aws s3 cp --recursive dist/ s3://$EKS_COMMON_BUCKET/trcli-executable/${{ matrix.name }}-${{ matrix.arch }}/

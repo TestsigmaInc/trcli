@@ -14,11 +14,7 @@ import multiprocessing
 from trcli.commands import *
 import traceback
 
-# Ensure proper handling of multiprocessing in frozen executables
 if __name__ == "__main__":
-
-    # Set multiprocessing start method
-    multiprocessing.set_start_method('forkserver', force=True)
 
     # Execute CLI
     print("Executing CLI")
