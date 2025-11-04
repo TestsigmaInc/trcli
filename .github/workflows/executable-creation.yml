@@ -12,6 +12,10 @@ on:
           - staging
           - production
 
+permissions:
+  id-token: write   # Required for requesting the JWT
+  contents: read    # Required for actions/checkout
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -31,8 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
       - name: Install dependencies
         run:  |
@@ -58,34 +64,25 @@ jobs:
 
       # Set environment variables
       - name: Set environment variables
+        shell: bash
         run: |
           echo "Environment: ${{ github.event.inputs.environment }} "
-          echo "Region: ${{ github.event.inputs.region }} "
-          echo "Cloud Provider: ${{ github.event.inputs.cloud_provider }} "
           echo "Github Workspace Folder: ${{ github.workspace }}"
 
           echo "AWS_DEFAULT_OUTPUT=json" >> $GITHUB_ENV
          
           if [[ ${{ github.event.inputs.environment }} == production ]]; then
-            echo "AWS_ROLE_ARN=${{secrets.PROD_AWS_GITHUB_OIDC_ROLE_ARN}}" >> $GITHUB_ENV
+            echo "AWS_ROLE_ARN=${{ secrets.PROD_AWS_GITHUB_OIDC_ROLE_ARN }}" >> $GITHUB_ENV
             echo "PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "WORKLOAD_ID=${{ secrets.PROD_GCP_WORKLOAD_ID }}" >> $GITHUB_ENV
             echo "SERVICE_ACCOUNT=${{ secrets.PROD_GCP_SERVICE_ACCOUNT }}" >> $GITHUB_ENV
-            echo "BASE_REPO=java-production" >> $GITHUB_ENV
-
-            if [[ ${{ github.event.inputs.region }} == EU ]]; then
-              echo "AWS_DEFAULT_REGION=eu-west-1" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-eu" >> $GITHUB_ENV
-            elif [[ ${{ github.event.inputs.region }} == IN ]]; then
-              echo "AWS_DEFAULT_REGION=ap-south-1" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-in" >> $GITHUB_ENV
-            else
-              echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket" >> $GITHUB_ENV
-            fi
+            echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+            echo "ARTIFACT_REPO_URL=us-east4-docker.pkg.dev" >> $GITHUB_ENV
+            echo "EKS_COMMON_BUCKET=eks-common-prod-bucket" >> $GITHUB_ENV
           else
             echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-            echo "AWS_ROLE_ARN=${{secrets.STAGE_AWS_GITHUB_OIDC_ROLE_ARN}}" >> $GITHUB_ENV
+            echo "ARTIFACT_REPO_URL=us-east4-docker.pkg.dev" >> $GITHUB_ENV
+            echo "AWS_ROLE_ARN=${{ secrets.STAGE_AWS_GITHUB_OIDC_ROLE_ARN }}" >> $GITHUB_ENV
             echo "PROJECT_ID=${{ secrets.STAGE_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "WORKLOAD_ID=${{ secrets.STAGE_GCP_WORKLOAD_ID }}" >> $GITHUB_ENV
             echo "SERVICE_ACCOUNT=${{ secrets.STAGE_GCP_SERVICE_ACCOUNT }}" >> $GITHUB_ENV
@@ -95,7 +92,6 @@ jobs:
 
       # Set up environment variables for the cloud provider
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.cloud_provider == 'AWS' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
