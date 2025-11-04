@@ -70,7 +70,7 @@ jobs:
             echo "WORKLOAD_ID=${{ secrets.PROD_GCP_WORKLOAD_ID }}" >> $GITHUB_ENV
             echo "SERVICE_ACCOUNT=${{ secrets.PROD_GCP_SERVICE_ACCOUNT }}" >> $GITHUB_ENV
             echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-            echo "ARTIFACT_REPO_URL=us-east4-docker.pkg.dev" >> $GITHUB_ENV`
+            echo "ARTIFACT_REPO_URL=us-east4-docker.pkg.dev" >> $GITHUB_ENV
             echo "EKS_COMMON_BUCKET=eks-common-prod-bucket" >> $GITHUB_ENV
           else
             echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
