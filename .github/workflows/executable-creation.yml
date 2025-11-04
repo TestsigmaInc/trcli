@@ -64,6 +64,7 @@ jobs:
 
       # Set environment variables
       - name: Set environment variables
+        shell: bash
         run: |
           echo "Environment: ${{ github.event.inputs.environment }} "
           echo "Github Workspace Folder: ${{ github.workspace }}"
