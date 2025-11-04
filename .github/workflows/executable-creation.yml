@@ -56,37 +56,51 @@ jobs:
            fi
         shell: bash
 
-      - name: Set up environment variables
+      # Set environment variables
+      - name: Set environment variables
         run: |
-            echo "AWS_DEFAULT_OUTPUT=json" >> $GITHUB_ENV
-  
-            if [ "${{ github.event.inputs.environment }}" = "production" ]; then
-              echo "AWS_ACCESS_KEY_ID=${{ secrets.APP_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-              echo "AWS_SECRET_ACCESS_KEY=${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-  
-              if [ "${{ github.event.inputs.region }}" = "EU" ]; then
-                echo "AWS_DEFAULT_REGION=eu-west-1" >> $GITHUB_ENV
-                echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-eu" >> $GITHUB_ENV
-              else
-                echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-                echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-eu" >> $GITHUB_ENV
-              fi
-  
+          echo "Environment: ${{ github.event.inputs.environment }} "
+          echo "Region: ${{ github.event.inputs.region }} "
+          echo "Cloud Provider: ${{ github.event.inputs.cloud_provider }} "
+          echo "Github Workspace Folder: ${{ github.workspace }}"
+
+          echo "AWS_DEFAULT_OUTPUT=json" >> $GITHUB_ENV
+         
+          if [[ ${{ github.event.inputs.environment }} == production ]]; then
+            echo "AWS_ROLE_ARN=${{secrets.PROD_AWS_GITHUB_OIDC_ROLE_ARN}}" >> $GITHUB_ENV
+            echo "PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "WORKLOAD_ID=${{ secrets.PROD_GCP_WORKLOAD_ID }}" >> $GITHUB_ENV
+            echo "SERVICE_ACCOUNT=${{ secrets.PROD_GCP_SERVICE_ACCOUNT }}" >> $GITHUB_ENV
+            echo "BASE_REPO=java-production" >> $GITHUB_ENV
+
+            if [[ ${{ github.event.inputs.region }} == EU ]]; then
+              echo "AWS_DEFAULT_REGION=eu-west-1" >> $GITHUB_ENV
+              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-eu" >> $GITHUB_ENV
+            elif [[ ${{ github.event.inputs.region }} == IN ]]; then
+              echo "AWS_DEFAULT_REGION=ap-south-1" >> $GITHUB_ENV
+              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-in" >> $GITHUB_ENV
             else
               echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-              echo "AWS_ACCESS_KEY_ID=${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-              echo "AWS_SECRET_ACCESS_KEY=${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-bucket" >> $GITHUB_ENV
+              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket" >> $GITHUB_ENV
             fi
+          else
+            echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+            echo "AWS_ROLE_ARN=${{secrets.STAGE_AWS_GITHUB_OIDC_ROLE_ARN}}" >> $GITHUB_ENV
+            echo "PROJECT_ID=${{ secrets.STAGE_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "WORKLOAD_ID=${{ secrets.STAGE_GCP_WORKLOAD_ID }}" >> $GITHUB_ENV
+            echo "SERVICE_ACCOUNT=${{ secrets.STAGE_GCP_SERVICE_ACCOUNT }}" >> $GITHUB_ENV
+            echo "EKS_COMMON_BUCKET=eks-common-bucket" >> $GITHUB_ENV
+          fi
 
-        shell: bash
-    
-      - name: Set up AWS credentials
+
+      # Set up environment variables for the cloud provider
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.cloud_provider == 'AWS' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws-region: ${{ env.AWS_DEFAULT_REGION }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
       - name: Upload Executable to S3
         run:
