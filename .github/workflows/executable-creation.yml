@@ -85,7 +85,6 @@ jobs:
 
       # Set up environment variables for the cloud provider
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.cloud_provider == 'AWS' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
