@@ -1,5 +1,5 @@
-import re
-from beartype.typing import Union, List, Dict
+import re, ast
+from beartype.typing import Union, List, Dict, Tuple
 
 
 class MatchersParser:
@@ -9,7 +9,7 @@ class MatchersParser:
     PROPERTY = "property"
 
     @staticmethod
-    def parse_name_with_id(case_name: str) -> (int, str):
+    def parse_name_with_id(case_name: str) -> Tuple[int, str]:
         """Parses case names expecting an ID following one of the following patterns:
         - "C123 my test case"
         - "my test case C123"
@@ -19,6 +19,7 @@ class MatchersParser:
         - "[C123] my test case"
         - "my test case [C123]"
         - "module 1 [C123] my test case"
+        - "my_test_case_C123()" (JUnit 5 support)
 
         :param case_name: Name of the test case
         :return: Tuple with test case ID and test case name without the ID
@@ -29,9 +30,10 @@ class MatchersParser:
             for idx, part in enumerate(parts):
                 if part.lower().startswith("c") and len(part) > 1:
                     id_part = part[1:]
-                    if id_part.isnumeric():
+                    id_part_clean = re.sub(r'\(.*\)$', '', id_part)
+                    if id_part_clean.isnumeric():
                         parts_copy.pop(idx)
-                        return int(id_part), char.join(parts_copy)
+                        return int(id_part_clean), char.join(parts_copy)
 
         results = re.findall(r"\[(.*?)\]", case_name)
         for result in results:
@@ -49,7 +51,7 @@ class MatchersParser:
 class FieldsParser:
 
     @staticmethod
-    def resolve_fields(fields: Union[List[str], Dict]) -> (Dict, str):
+    def resolve_fields(fields: Union[List[str], Dict]) -> Tuple[Dict, str]:
         error = None
         fields_dictionary = {}
         try:
@@ -58,7 +60,7 @@ class FieldsParser:
                     field, value = field.split(":", maxsplit=1)
                     if value.startswith("["):
                         try:
-                            value = eval(value)
+                            value = ast.literal_eval(value)
                         except Exception:
                             pass
                     fields_dictionary[field] = value

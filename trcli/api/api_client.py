@@ -1,5 +1,8 @@
 import json
 from pathlib import Path
+import platform
+import os
+import base64
 
 import requests
 from beartype.typing import Union, Callable, Dict, List
@@ -47,9 +50,10 @@ class APIClient:
         retries: int = DEFAULT_API_CALL_RETRIES,
         timeout: int = DEFAULT_API_CALL_TIMEOUT,
         verify: bool = True,
-        proxy: str = None, #added proxy params
+        proxy: str = None,  # added proxy params
         proxy_user: str = None,
-        noproxy: str = None, 
+        noproxy: str = None,
+        uploader_metadata: str = None,
     ):
         self.username = ""
         self.password = ""
@@ -62,8 +66,9 @@ class APIClient:
         self.__validate_and_set_timeout(timeout)
         self.proxy = proxy
         self.proxy_user = proxy_user
-        self.noproxy = noproxy.split(',') if noproxy else [] 
-        
+        self.noproxy = noproxy.split(",") if noproxy else []
+        self.uploader_metadata = uploader_metadata
+
         if not host_name.endswith("/"):
             host_name = host_name + "/"
         self.__url = host_name + self.SUFFIX_API_V2_VERSION
@@ -80,7 +85,9 @@ class APIClient:
         """
         return self.__send_request("GET", uri, None)
 
-    def send_post(self, uri: str, payload: dict = None, files: Dict[str, Path] = None) -> APIClientResult:
+    def send_post(
+        self, uri: str, payload: dict = None, files: Dict[str, Path] = None, as_form_data: bool = False
+    ) -> APIClientResult:
         """
         Sends POST request to host specified by host_name.
         Handles retries taking into consideration retries parameter. Retry will occur when one of the following happens:
@@ -88,9 +95,11 @@ class APIClient:
             * timeout occurred
             * connection error occurred
         """
-        return self.__send_request("POST", uri, payload, files)
+        return self.__send_request("POST", uri, payload, files, as_form_data)
 
-    def __send_request(self, method: str, uri: str, payload: dict, files: Dict[str, Path] = None) -> APIClientResult:
+    def __send_request(
+        self, method: str, uri: str, payload: dict, files: Dict[str, Path] = None, as_form_data: bool = False
+    ) -> APIClientResult:
         status_code = -1
         response_text = ""
         error_message = ""
@@ -99,7 +108,8 @@ class APIClient:
         auth = HTTPBasicAuth(username=self.username, password=password)
         headers = {"User-Agent": self.USER_AGENT}
         headers.update(self.__get_proxy_headers())
-        if files is None:
+        headers.update(self.__get_uploader_metadata_headers())
+        if files is None and not as_form_data:
             headers["Content-Type"] = "application/json"
         verbose_log_message = ""
         proxies = self._get_proxies_for_request(url)
@@ -107,28 +117,35 @@ class APIClient:
             error_message = ""
             try:
                 verbose_log_message = APIClient.format_request_for_vlog(
-                    method=method, url=url, payload=payload
+                    method=method, url=url, payload=payload, headers=headers
                 )
                 if method == "POST":
-                    response = requests.post(
+                    request_kwargs = {
+                        "url": url,
+                        "auth": auth,
+                        "headers": headers,
+                        "timeout": self.timeout,
+                        "verify": self.verify,
+                        "proxies": proxies,
+                    }
+                    if files:
+                        request_kwargs["files"] = files
+                        request_kwargs["data"] = payload if payload else {}
+                    elif as_form_data:
+                        request_kwargs["data"] = payload
+                    else:
+                        request_kwargs["json"] = payload
+
+                    response = requests.post(**request_kwargs)
+                else:
+                    response = requests.get(
                         url=url,
                         auth=auth,
                         json=payload,
                         timeout=self.timeout,
-                        headers=headers,
                         verify=self.verify,
-                        files=files,
-                        proxies=proxies
-                    )
-                else:
-                    response = requests.get(
-                        url=url, 
-                        auth=auth, 
-                        json=payload, 
-                        timeout=self.timeout, 
-                        verify=self.verify, 
                         headers=headers,
-                        proxies=proxies
+                        proxies=proxies,
                     )
             except InvalidProxyURL:
                 error_message = FAULT_MAPPING["proxy_invalid_configuration"]
@@ -151,9 +168,7 @@ class APIClient:
                 self.verbose_logging_function(verbose_log_message)
                 continue
             except RequestException as e:
-                error_message = FAULT_MAPPING[
-                    "unexpected_error_during_request_send"
-                ].format(request=e.request)
+                error_message = FAULT_MAPPING["unexpected_error_during_request_send"].format(request=e.request)
                 self.verbose_logging_function(verbose_log_message)
                 break
             else:
@@ -170,15 +185,20 @@ class APIClient:
                         response_text = response.json()
                     error_message = response_text.get("error", "")
                 except (JSONDecodeError, ValueError):
-                    response_text = str(response.content)
-                    error_message = response.content
+                    if len(response.content) == 0:
+                        # Empty response with HTTP 200 is valid for certain operations like delete
+                        response_text = {}
+                        error_message = ""
+                    else:
+                        response_preview = response.content[:200].decode("utf-8", errors="ignore")
+                        response_text = str(response.content)
+                        error_message = FAULT_MAPPING["invalid_json_response"].format(
+                            status_code=status_code, response_preview=response_preview
+                        )
                 except AttributeError:
                     error_message = ""
-                verbose_log_message = (
-                    verbose_log_message
-                    + APIClient.format_response_for_vlog(
-                        response.status_code, response_text
-                    )
+                verbose_log_message = verbose_log_message + APIClient.format_response_for_vlog(
+                    response.status_code, response_text
                 )
             if verbose_log_message:
                 self.verbose_logging_function(verbose_log_message)
@@ -194,12 +214,21 @@ class APIClient:
         """
         headers = {}
         if self.proxy_user:
-            user_pass_encoded = b64encode(self.proxy_user.encode('utf-8')).decode('utf-8')
+            user_pass_encoded = b64encode(self.proxy_user.encode("utf-8")).decode("utf-8")
 
             # Add Proxy-Authorization header
             headers["Proxy-Authorization"] = f"Basic {user_pass_encoded}"
             print(f"Proxy authentication header added: {headers['Proxy-Authorization']}")
 
+        return headers
+
+    def __get_uploader_metadata_headers(self) -> Dict[str, str]:
+        """
+        Returns headers for uploader metadata.
+        """
+        headers = {}
+        if self.uploader_metadata:
+            headers["X-Uploader-Metadata"] = self.uploader_metadata
         return headers
 
     def _get_proxies_for_request(self, url: str) -> Dict[str, str]:
@@ -217,9 +246,9 @@ class APIClient:
 
         # Bypass the proxy if the host is in the noproxy list
         if self.noproxy:
-        # Ensure noproxy is a list or tuple
+            # Ensure noproxy is a list or tuple
             if isinstance(self.noproxy, str):
-                self.noproxy = self.noproxy.split(',')
+                self.noproxy = self.noproxy.split(",")
             if host in self.noproxy:
                 print(f"Bypassing proxy for host: {host}")
                 return None
@@ -228,7 +257,7 @@ class APIClient:
         if self.proxy and not self.proxy.startswith("http://") and not self.proxy.startswith("https://"):
             self.proxy = "http://" + self.proxy  # Default to http if scheme is missing
 
-        #print(f"Parsed URL: {url}, Proxy: {self.proxy} , NoProxy: {self.noproxy}")
+        # print(f"Parsed URL: {url}, Proxy: {self.proxy} , NoProxy: {self.noproxy}")
 
         # Define the proxy dictionary
         proxy_dict = {}
@@ -237,15 +266,13 @@ class APIClient:
             if self.proxy.startswith("http://"):
                 proxy_dict = {
                     "http": self.proxy,  # Use HTTP proxy for HTTP traffic
-                    "https": self.proxy  # Also use HTTP proxy for HTTPS traffic
+                    "https": self.proxy,  # Also use HTTP proxy for HTTPS traffic
                 }
             else:
                 # If the proxy is HTTPS, route accordingly
-                proxy_dict = {
-                    scheme: self.proxy  # Match the proxy scheme with the target URL scheme
-                }
+                proxy_dict = {scheme: self.proxy}  # Match the proxy scheme with the target URL scheme
 
-            #print(f"Using proxy: {proxy_dict}")
+            # print(f"Using proxy: {proxy_dict}")
             return proxy_dict
 
         return None
@@ -270,12 +297,34 @@ class APIClient:
             self.timeout = DEFAULT_API_CALL_TIMEOUT
 
     @staticmethod
-    def format_request_for_vlog(method: str, url: str, payload: dict):
-        return (
-            f"\n**** API Call\n"
-            f"method: {method}\n"
-            f"url: {url}\n" + (f"payload: {payload}\n" if payload else "")
-        )
+    def build_uploader_metadata(version: str) -> str:
+        """
+        Build uploader metadata as base64-encoded JSON.
+
+        :param version: Application version
+        :returns: Base64-encoded metadata string
+        """
+        data = {
+            "app_name": "trcli",
+            "app_version": version,
+            "os": platform.system().lower(),
+            "arch": platform.machine(),
+            "run_mode": "ci" if os.getenv("CI") else "other",
+            "container": os.path.exists("/.dockerenv"),
+        }
+
+        return base64.b64encode(json.dumps(data).encode()).decode()
+
+    @staticmethod
+    def format_request_for_vlog(method: str, url: str, payload: dict, headers: dict = None):
+        log_message = f"\n**** API Call\n" f"method: {method}\n" f"url: {url}\n"
+        if headers:
+            log_message += "headers:\n"
+            for key, value in headers.items():
+                log_message += f"  {key}: {value}\n"
+        if payload:
+            log_message += f"payload: {payload}\n"
+        return log_message
 
     @staticmethod
     def format_response_for_vlog(status_code, body):

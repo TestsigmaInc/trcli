@@ -14,10 +14,13 @@ def print_config(env: Environment):
             f"\n> Suite ID: {env.suite_id}"
             f"\n> Description: {env.run_description}"
             f"\n> Milestone ID: {env.milestone_id}"
+            f"\n> Start Date: {env.run_start_date}"
+            f"\n> End Date: {env.run_end_date}"
             f"\n> Assigned To ID: {env.run_assigned_to_id}"
             f"\n> Include All: {env.run_include_all}"
             f"\n> Case IDs: {env.run_case_ids}"
-            f"\n> Refs: {env.run_refs}")
+            f"\n> Refs: {env.run_refs}"
+            f"\n> Refs Action: {env.run_refs_action if hasattr(env, 'run_refs_action') else 'add'}")
 
 
 def write_run_to_file(environment: Environment, run_id: int):
@@ -42,6 +45,12 @@ def write_run_to_file(environment: Environment, run_id: int):
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.option("--title", metavar="", help="Title of Test Run to be created or updated in TestRail.")
 @click.option(
+    "--run-id",
+    type=click.IntRange(min=1),
+    metavar="",
+    help="ID of existing test run to update. If not provided, a new run will be created.",
+)
+@click.option(
     "--suite-id",
     type=click.IntRange(min=1),
     metavar="",
@@ -55,26 +64,54 @@ def write_run_to_file(environment: Environment, run_id: int):
     help="Milestone ID to which the Test Run should be associated to.",
 )
 @click.option(
+    "--run-start-date",
+    metavar="",
+    default=None,
+    type=lambda x: [int(i) for i in x.split("/") if len(x.split("/")) == 3], 
+    help="The expected or scheduled start date of this test run in MM/DD/YYYY format"
+)
+@click.option(
+    "--run-end-date",
+    metavar="",
+    default=None,
+    type=lambda x: [int(i) for i in x.split("/") if len(x.split("/")) == 3], 
+    help="The expected or scheduled end date of this test run in MM/DD/YYYY format"
+)
+@click.option(
     "--run-assigned-to-id",
     type=click.IntRange(min=1),
     metavar="",
     help="The ID of the user the test run should be assigned to."
 )
 @click.option(
-    "--include-all",
+    "--run-include-all",
     is_flag=True,
     default=False,
     help="Use this option to include all test cases in this test run."
 )
 @click.option(
-    "--case-ids",
+    "--auto-close-run",
+    is_flag=True,
+    default=False,
+    help="Use this option to automatically close the created run."
+)
+@click.option(
+    "--run-case-ids",
     metavar="",
-    help="Comma separated list of test case IDs to include in the test run."
+    type=lambda x: [int(i) for i in x.split(",")], 
+    help="Comma separated list of test case IDs to include in the test run (i.e.: 1,2,3,4)."
 )
 @click.option(
     "--run-refs",
     metavar="",
-    help="A comma-separated list of references/requirements"
+    help="A comma-separated list of references/requirements (up to 250 characters)"
+)
+@click.option(
+    "--run-refs-action",
+    type=click.Choice(['add', 'update', 'delete'], case_sensitive=False),
+    default='add',
+    metavar="",
+    help="Action to perform on references: 'add' (default), 'update' (replace all), or 'delete' (remove all or specific)"
 )
 @click.option("-f", "--file", type=click.Path(), metavar="", help="Write run data to file.")
 @click.pass_context
@@ -84,6 +121,18 @@ def cli(environment: Environment, context: click.Context, *args, **kwargs):
     environment.cmd = "add_run"
     environment.set_parameters(context)
     environment.check_for_required_parameters()
+    
+    if environment.run_refs and len(environment.run_refs) > 250:
+        environment.elog("Error: References field cannot exceed 250 characters.")
+        exit(1)
+    
+    if environment.run_refs_action and environment.run_refs_action != 'add' and not environment.run_id:
+        environment.elog("Error: --run-refs-action 'update' and 'delete' can only be used when updating an existing run (--run-id required).")
+        exit(1)
+    
+    if environment.run_refs_action == 'delete' and not environment.run_refs and environment.run_id:
+        environment.run_refs = ""
+    
     print_config(environment)
 
     project_client = ProjectBasedClient(

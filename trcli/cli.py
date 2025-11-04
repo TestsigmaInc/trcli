@@ -51,6 +51,8 @@ class Environment:
         self.plan_id = None
         self.config_ids = None
         self.milestone_id = None
+        self.run_start_date = None
+        self.run_end_date = None
         self.section_id = None
         self.auto_creation_response = None
         self.silent = None
@@ -65,8 +67,14 @@ class Environment:
         self.run_assigned_to_id = None
         self.run_case_ids = None
         self.run_include_all = None
+        self.auto_close_run = None
         self.run_refs = None
-        self.proxy = None  # Add proxy related attributes
+        self.test_run_ref = None
+        self.json_output = None
+        self.update_existing_cases = None
+        self.update_strategy = None
+        self.proxy = None
+        self.assign_failed_to = None  # Add proxy related attributes
         self.noproxy = None
         self.proxy_user = None
 
@@ -272,7 +280,7 @@ class TRCLI(click.MultiCommand):
 )
 @click.option("-u", "--username", type=click.STRING, metavar="", help="Username.")
 @click.option("-p", "--password", type=click.STRING, metavar="", help="Password.")
-@click.option("-k", "--key", metavar="", help="API key.")
+@click.option("-k", "--key", metavar="", help="API key used for authenticating with TestRail. This must be used in conjunction with --username. If provided, --password is not required.")
 @click.option(
     "-v", "--verbose", is_flag=True, help="Output all API calls and their results."
 )

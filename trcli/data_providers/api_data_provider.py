@@ -1,7 +1,9 @@
 from beartype.typing import List, Dict, Optional
 
 from serde.json import to_dict
+from datetime import datetime, timezone
 
+from trcli.constants import OLD_SYSTEM_NAME_AUTOMATION_ID, UPDATED_SYSTEM_NAME_AUTOMATION_ID
 from trcli.data_classes.dataclass_testrail import TestRailSuite
 
 
@@ -65,6 +67,8 @@ class ApiDataProvider:
             self,
             run_name: Optional[str],
             case_ids=None,
+            start_date=None,
+            end_date=None,
             milestone_id=None,
             assigned_to_id=None,
             include_all=None,
@@ -89,9 +93,20 @@ class ApiDataProvider:
         body = {
             "suite_id": self.suites_input.suite_id,
             "description": "\n".join(properties),
-            "milestone_id": milestone_id,
             "case_ids": case_ids
         }
+        if isinstance(start_date, list) and start_date is not None:
+            try:
+                dt = datetime(start_date[2], start_date[0], start_date[1], tzinfo=timezone.utc)
+                body["start_on"] = int(dt.timestamp())
+            except ValueError:
+                body["start_on"] = None
+        if isinstance(end_date, list) and end_date is not None:
+            try:
+                dt = datetime(end_date[2], end_date[0], end_date[1], tzinfo=timezone.utc)
+                body["due_on"] = int(dt.timestamp())
+            except ValueError:
+                body["due_on"] = None
         if include_all is not None:
             body["include_all"] = include_all
         if assigned_to_id is not None:
@@ -100,19 +115,39 @@ class ApiDataProvider:
             body["refs"] = refs
         if run_name is not None:
             body["name"] = run_name
+        if milestone_id is not None:
+            body["milestone_id"] = milestone_id
         return body
 
-    def add_results_for_cases(self, bulk_size):
+    def add_results_for_cases(self, bulk_size, user_ids=None):
         """Return bodies for adding results for cases. Returns bodies for results that already have case ID."""
         testcases = [sections.testcases for sections in self.suites_input.testsections]
 
         bodies = []
+        user_index = 0
+        assigned_count = 0
+        total_failed_count = 0
 
         for sublist in testcases:
             for case in sublist:
                 if case.case_id is not None:
                     case.result.add_global_result_fields(self.result_fields)
+                    
+                    # Count failed tests
+                    if case.result.status_id == 5:  # status_id 5 = Failed
+                        total_failed_count += 1
+                        
+                        # Assign failed tests to users in round-robin fashion if user_ids provided
+                        if user_ids:
+                            case.result.assignedto_id = user_ids[user_index % len(user_ids)]
+                            user_index += 1
+                            assigned_count += 1
+                    
                     bodies.append(case.result.to_dict())
+
+        # Store counts for logging (we'll access this from the api_request_handler)
+        self._assigned_count = assigned_count if user_ids else 0
+        self._total_failed_count = total_failed_count
 
         result_bulks = ApiDataProvider.divide_list_into_bulks(
             bodies,
@@ -193,7 +228,8 @@ class ApiDataProvider:
                 "case_id": 1,
                 "section_id": 1
                 "title": "testCase1",
-                "custom_automation_id": "className.testCase1"
+                "custom_automation_id": "className.testCase1",
+                "custom_case_automation_id": "className.testCase1"
             }
 
         """
@@ -204,10 +240,21 @@ class ApiDataProvider:
                     case
                     for sublist in testcases
                     for case in sublist
-                    if case.custom_automation_id == case_updater["custom_automation_id"]
+                    if case.custom_automation_id == case_updater[OLD_SYSTEM_NAME_AUTOMATION_ID]
                 ),
                 None,
             )
+            if matched_case is None:
+                matched_case = next(
+                    (
+                        case
+                        for sublist in testcases
+                        for case in sublist
+                        if hasattr(case, UPDATED_SYSTEM_NAME_AUTOMATION_ID)
+                        and case.custom_case_automation_id == case_updater.get(UPDATED_SYSTEM_NAME_AUTOMATION_ID)
+                    ),
+                    None,
+                )
             if matched_case is not None:
                 matched_case.case_id = case_updater["case_id"]
                 matched_case.result.case_id = case_updater["case_id"]
