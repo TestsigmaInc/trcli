@@ -60,8 +60,6 @@ jobs:
       - name: Set environment variables
         run: |
           echo "Environment: ${{ github.event.inputs.environment }} "
-          echo "Region: ${{ github.event.inputs.region }} "
-          echo "Cloud Provider: ${{ github.event.inputs.cloud_provider }} "
           echo "Github Workspace Folder: ${{ github.workspace }}"
 
           echo "AWS_DEFAULT_OUTPUT=json" >> $GITHUB_ENV
@@ -71,18 +69,8 @@ jobs:
             echo "PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "WORKLOAD_ID=${{ secrets.PROD_GCP_WORKLOAD_ID }}" >> $GITHUB_ENV
             echo "SERVICE_ACCOUNT=${{ secrets.PROD_GCP_SERVICE_ACCOUNT }}" >> $GITHUB_ENV
-            echo "BASE_REPO=java-production" >> $GITHUB_ENV
-
-            if [[ ${{ github.event.inputs.region }} == EU ]]; then
-              echo "AWS_DEFAULT_REGION=eu-west-1" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-eu" >> $GITHUB_ENV
-            elif [[ ${{ github.event.inputs.region }} == IN ]]; then
-              echo "AWS_DEFAULT_REGION=ap-south-1" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket-in" >> $GITHUB_ENV
-            else
-              echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
-              echo "EKS_COMMON_BUCKET=eks-common-prod-bucket" >> $GITHUB_ENV
-            fi
+            echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+            echo "EKS_COMMON_BUCKET=eks-common-prod-bucket" >> $GITHUB_ENV
           else
             echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
             echo "AWS_ROLE_ARN=${{secrets.STAGE_AWS_GITHUB_OIDC_ROLE_ARN}}" >> $GITHUB_ENV
