@@ -33,6 +33,7 @@ FAULT_MAPPING = dict(
     file_open_issue="Error occurred while opening the file ({file_path}). "
     "Make sure that the file exists or the path is correct.",
     missing_suite="Suite with ID '{suite_id}' does not exist in TestRail.",
+    missing_suite_by_name="Suite with name '{suite_name}' does not exist in TestRail.",
     no_user_agreement="User did not agree to create '{type}' automatically. Exiting.",
     error_checking_project="Error detected while checking a project: '{error_message}'",
     error_while_adding_suite="Error detected while adding suite: '{error_message}'",
@@ -63,7 +64,12 @@ FAULT_MAPPING = dict(
     proxy_bypass_error= "Failed to bypass the proxy for host. Please check the settings.",
     proxy_invalid_configuration= "The provided proxy configuration is invalid. Please check the proxy URL and format.",
     ssl_error_on_proxy= "SSL error encountered while using the HTTPS proxy. Please check the proxy's SSL certificate.",
-    no_proxy_match_error= "The host {host} does not match any NO_PROXY rules. Ensure the correct domains or IP addresses are specified for bypassing the proxy."
+    no_proxy_match_error= "The host {host} does not match any NO_PROXY rules. Ensure the correct domains or IP addresses are specified for bypassing the proxy.",
+    no_suites_found= "The project {project_id} does not have any suites.",
+    invalid_json_response= "Received invalid response from TestRail server (HTTP {status_code}). "
+    "Please verify your TestRail host URL (-h) is correct and points to a valid TestRail instance. "
+    "Response preview: {response_preview}",
+    invalid_api_response= "Invalid response from TestRail API: {error_details}"
 )
 
 COMMAND_FAULT_MAPPING = dict(
@@ -71,6 +77,8 @@ COMMAND_FAULT_MAPPING = dict(
     parse_junit=dict(**FAULT_MAPPING, **PARSE_COMMON_FAULT_MAPPING, **PARSE_JUNIT_OR_ROBOT_FAULT_MAPPING),
     parse_openapi=dict(**FAULT_MAPPING, **PARSE_COMMON_FAULT_MAPPING),
     parse_robot=dict(**FAULT_MAPPING, **PARSE_COMMON_FAULT_MAPPING, **PARSE_JUNIT_OR_ROBOT_FAULT_MAPPING),
+    labels=dict(**FAULT_MAPPING),
+    references=dict(**FAULT_MAPPING),
 )
 
 PROMPT_MESSAGES = dict(
@@ -86,12 +94,13 @@ PROMPT_MESSAGES = dict(
 )
 
 TOOL_VERSION = f"""TestRail CLI v{trcli.__version__}
-Copyright 2024 Gurock Software GmbH - www.gurock.com"""
+Copyright 2025 Gurock Software GmbH - www.gurock.com"""
 TOOL_USAGE = f"""Supported and loaded modules:
     - parse_junit: JUnit XML Files (& Similar)
     - parse_robot: Robot Framework XML Files
     - parse_openapi: OpenAPI YML Files
-    - add_run: Create a new test run"""
+    - add_run: Create a new test run
+    - labels: Manage labels (projects, cases, and tests)"""
 
 MISSING_COMMAND_SLOGAN = """Usage: trcli [OPTIONS] COMMAND [ARGS]...\nTry 'trcli --help' for help.
 \nError: Missing command."""
@@ -118,3 +127,7 @@ class RevertMessages:
     test_cases_not_deleted = "Unable to delete created test cases: {error}"
     run_deleted = "Deleted created run"
     run_not_deleted = "Unable to delete created run: {error}"
+
+OLD_SYSTEM_NAME_AUTOMATION_ID = "custom_automation_id"
+# field name mismatch on testrail side (can not reproduce in cloud version TestRail v9.1.2)
+UPDATED_SYSTEM_NAME_AUTOMATION_ID = "custom_case_automation_id"

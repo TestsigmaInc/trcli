@@ -6,6 +6,121 @@ This project adheres to [Semantic Versioning](https://semver.org/). Version numb
 - **MINOR**: New features that are backward-compatible.
 - **PATCH**: Bug fixes or minor changes that do not affect backward compatibility.
 
+## [1.12.4]
+
+_released 11-03-2025
+
+### Fixed
+ - Fixed an issue where some empty API responses are blocked/treated as error due to stricter configuration checks.
+
+## [1.12.3]
+
+_released 10-31-2025
+
+### Added
+ - Enhanced TRCLI analytics integration with TestRail API enabling better tracking and insight into usage patterns.
+ - Introduced new development workflow improvements to streamline the contributor and release process.
+
+## [1.12.2]
+
+_released 10-16-2025
+
+### Added
+ - Allow adding references via parse_junit command using --test-run-ref
+ - Allow parse_junit to update existing test cases reference field from JUnit testrail_case_field properties
+
+## [1.12.1]
+
+_released 09-30-2025
+
+### Added
+ - Added failed automated tests assignment using --assign option
+
+### Fixed
+ - Fixed an issue where JUnit parser fails to detect test case IDs at the beginning or it contains parentheses at the end of testcase names
+
+## [1.12.0]
+
+_released 09-11-2025
+
+### Added
+ - Added Label management facility for Projects, Test Cases and Tests
+ - Added Reference management feature for cases using 'references cases' command and add_run command using --run-refs and --run-refs-action
+
+### Fixed
+ - Fixed check_suite_id to handle paginated results
+ - Fixed test run detachment when updating a test run without --milestone-id
+ - Updated supported Click library to latest stable version 8.2.1
+
+## [1.11.0]
+
+_released 07-30-2025
+
+### Added
+ - Added feature to optionally close test run using --auto-close-run in add_run command
+ - Added support for Start and End Date API changes for Test Runs and Test Plans
+
+## [1.10.1]
+
+_released 07-11-2025
+
+### Fixed
+ - Fixed an issue where users can't upload test results due to TypeError encountered in get_suites API
+
+## [1.10.0]
+
+_released 07-02-2025
+
+### Added
+ - Added support for custom test statuses when reporting successes and failures
+ - Refactor junit xml parsing for maintainability
+
+## [1.9.14]
+
+_released 06-19-2025
+
+### Fixed
+ - Fixed an issue where test cases are not created in sections specified by --section-id
+ - Test cases not being added when using --case-ids in add_run module
+
+## [1.9.13]
+
+_released 06-11-2025
+
+### Fixed
+ - get_all_sections() method sets query parameter limit to 0 and fails with 400 Bad Request response 
+ - Refactor and fix setting custom_automation_id via property
+
+## [1.9.12]
+
+_released 05-30-2025
+
+### Fixed
+ - Corrected CLI parameter for --include-all
+ - Improved help output for using --key parameter
+ - Fixed an issue where automation id is not detected correctly during uploads
+
+## [1.9.11]
+
+_released 05-21-2025
+
+### Added
+ - Application build support for Python 3.13
+
+## [1.9.10]
+
+_released 05-15-2025
+
+### Fixed
+ - Fixed an issue where automation id is not mapping correctly when uploading test results
+
+## [1.9.9]
+
+_released 05-06-2025
+
+### Fixed
+ - Improve security on data parser
+
 ## [1.9.8]
 
 _released 10-04-2024

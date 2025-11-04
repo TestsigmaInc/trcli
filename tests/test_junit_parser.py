@@ -36,6 +36,10 @@ class TestJunitParser:
             (
                 Path(__file__).parent / "test_data/XML/required_only.xml",
                 Path(__file__).parent / "test_data/json/required_only.json",
+            ),
+            (
+                Path(__file__).parent / "test_data/XML/custom_automation_id_in_property.xml",
+                Path(__file__).parent / "test_data/json/custom_automation_id_in_property.json",
             )
         ],
         ids=[
@@ -43,6 +47,7 @@ class TestJunitParser:
             "XML with testsuites root",
             "XML with testsuites root, using a glob pattern",
             "XML with no data",
+            "XML with custom_automation_id as property",
         ],
     )
     @pytest.mark.parse_junit
@@ -164,9 +169,12 @@ class TestJunitParser:
     def __clear_unparsable_junit_elements(
         self, test_rail_suite: TestRailSuite
     ) -> TestRailSuite:
-        """helper method to delete junit_result_unparsed field,
+        """helper method to delete junit_result_unparsed field and temporary junit_case_refs attribute,
         which asdict() method of dataclass can't handle"""
         for section in test_rail_suite.testsections:
             for case in section.testcases:
                 case.result.junit_result_unparsed = []
+                # Remove temporary junit_case_refs attribute if it exists
+                if hasattr(case, '_junit_case_refs'):
+                    delattr(case, '_junit_case_refs')
         return test_rail_suite
