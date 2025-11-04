@@ -48,7 +48,7 @@ class ApiRequestHandler:
         if not response.error_message:
             fields: List = response.response_text
             automation_id_field = next(
-                filter(lambda x: x["system_name"] == "custom_automation_id", fields),
+                filter(lambda x: x["system_name"] in ["custom_automation_id", "custom_case_automation_id"], fields),
                 None
             )
             if automation_id_field:
@@ -427,7 +427,7 @@ class ApiRequestHandler:
         report_case_ids = add_run_data["case_ids"]
         joint_case_ids = list(set(report_case_ids + run_case_ids))
         add_run_data["case_ids"] = joint_case_ids
-        
+
         plan_id = run_response.response_text["plan_id"]
         config_ids = run_response.response_text["config_ids"]
         if not plan_id:
