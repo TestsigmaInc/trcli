@@ -318,6 +318,7 @@ class ApiRequestHandler:
             test_cases_by_aut_id = {}
             for case in returned_cases:
                 aut_case_id = case.get(OLD_SYSTEM_NAME_AUTOMATION_ID) or case.get(UPDATED_SYSTEM_NAME_AUTOMATION_ID)
+                print(f"Automation id {aut_case_id}")
                 if aut_case_id:
                     aut_case_id = html.unescape(aut_case_id)
                     test_cases_by_aut_id[aut_case_id] = case
@@ -325,6 +326,7 @@ class ApiRequestHandler:
             for section in self.suites_data_from_provider.testsections:
                 for test_case in section.testcases:
                     aut_id = test_case.custom_automation_id
+                    print(f"Automation id {aut_id}")
                     if aut_id in test_cases_by_aut_id.keys():
                         case = test_cases_by_aut_id[aut_id]
                         test_case_data.append({
@@ -334,6 +336,7 @@ class ApiRequestHandler:
                             OLD_SYSTEM_NAME_AUTOMATION_ID: aut_id
                         })
                     else:
+                        print(f"Missing test case {test_case}")
                         missing_cases_number += 1
             self.data_provider.update_data(case_data=test_case_data)
             if missing_cases_number:
