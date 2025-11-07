@@ -199,7 +199,7 @@ class JunitParser(FileParser):
             TODO: use section.iterchildren(JUnitTestCase) to get only testcases belonging to the section
             required for nested suites
             """
-            automation_id = f"{case.classname}.{case.name}"
+            automation_id = f"{case.classname}"
             case_id, case_name = self._extract_case_id_and_name(case)
             result_steps, attachments, result_fields, comments, case_fields, case_refs, sauce_session = self._parse_case_properties(
                 case)
