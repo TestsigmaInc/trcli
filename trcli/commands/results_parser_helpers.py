@@ -35,7 +35,7 @@ def results_parser_options(f):
     @click.option(
         "--case-matcher",
         metavar="",
-        default="auto",
+        default="name",
         type=click.Choice(["auto", "name", "property"], case_sensitive=False),
         help="Mechanism to match cases between the report and TestRail."
     )
