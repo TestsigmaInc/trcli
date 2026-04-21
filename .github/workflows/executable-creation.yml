@@ -74,6 +74,7 @@ jobs:
           docker run --rm $PLATFORM -v ${{ github.workspace }}:/work \
             python:3.10-slim-bullseye \
             bash -c "
+              apt-get update -qq && apt-get install -y --no-install-recommends binutils &&
               pip install --upgrade pip --root-user-action=ignore &&
               pip install -r /work/tests/requirements.txt pyinstaller --root-user-action=ignore &&
               cd /work &&
