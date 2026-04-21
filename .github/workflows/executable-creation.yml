@@ -57,11 +57,23 @@ jobs:
           pyinstaller main.spec
           ls dist
 
+      - name: Set up QEMU (for arm64 cross-build on amd64 runner)
+        if: matrix.name == 'linux' && matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Create Executable Using Pyinstaller (Linux - manylinux2014, GLIBC ≥ 2.17)
         if: matrix.name == 'linux'
         run: |
-          IMAGE=$([[ "${{ matrix.arch }}" == "arm64" ]] && echo "quay.io/pypa/manylinux2014_aarch64" || echo "quay.io/pypa/manylinux2014_x86_64")
-          docker run --rm -v ${{ github.workspace }}:/work $IMAGE \
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            IMAGE="quay.io/pypa/manylinux2014_aarch64"
+            PLATFORM="--platform linux/arm64"
+          else
+            IMAGE="quay.io/pypa/manylinux2014_x86_64"
+            PLATFORM=""
+          fi
+          docker run --rm $PLATFORM -v ${{ github.workspace }}:/work $IMAGE \
             bash -c "
               /opt/python/cp310-cp310/bin/pip install --upgrade pip &&
               /opt/python/cp310-cp310/bin/pip install -r /work/tests/requirements.txt pyinstaller &&
