@@ -30,30 +30,59 @@ jobs:
             name: linux
           - os: macos-latest
             name: macos
+        exclude:
+          - os: macos-latest
+            arch: amd64  # macos runners are arm64 (M1); amd64 cross-compile not needed
 
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
+        if: matrix.name != 'linux'
         uses: actions/setup-python@v3
         with:
           python-version: "3.10"
 
       - name: Install dependencies
-        run:  |
+        if: matrix.name != 'linux'
+        run: |
           python -m pip install --upgrade pip
           pip install -r tests/requirements.txt
           pip install pyinstaller
 
       - name: Create Executable Using Pyinstaller
+        if: matrix.name != 'linux'
         run: |
-          ls
-          pwd
           pyinstaller main.spec
           ls dist
-      
+
+      - name: Set up QEMU (for arm64 cross-build on amd64 runner)
+        if: matrix.name == 'linux' && matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Create Executable Using Pyinstaller (Linux - Debian 11/GLIBC 2.31)
+        if: matrix.name == 'linux'
+        run: |
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            PLATFORM="--platform linux/arm64"
+          else
+            PLATFORM=""
+          fi
+          docker run --rm $PLATFORM -v ${{ github.workspace }}:/work \
+            python:3.10-slim-bullseye \
+            bash -c "
+              apt-get update -qq && apt-get install -y --no-install-recommends binutils &&
+              pip install --upgrade pip --root-user-action=ignore &&
+              pip install -r /work/tests/requirements.txt pyinstaller --root-user-action=ignore &&
+              cd /work &&
+              pyinstaller main.spec
+            "
+
       - name: Print Executable Version
+        if: "!(matrix.name == 'linux' && matrix.arch == 'arm64')"
         run: |
            if [ "${{ matrix.name }}" = "windows" ]; then
               ./dist/trcli-exe.exe --help
