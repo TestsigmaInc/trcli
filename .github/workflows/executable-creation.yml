@@ -63,22 +63,21 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Create Executable Using Pyinstaller (Linux - manylinux2014, GLIBC ≥ 2.17)
+      - name: Create Executable Using Pyinstaller (Linux - Debian 11/GLIBC 2.31)
         if: matrix.name == 'linux'
         run: |
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            IMAGE="quay.io/pypa/manylinux2014_aarch64"
             PLATFORM="--platform linux/arm64"
           else
-            IMAGE="quay.io/pypa/manylinux2014_x86_64"
             PLATFORM=""
           fi
-          docker run --rm $PLATFORM -v ${{ github.workspace }}:/work $IMAGE \
+          docker run --rm $PLATFORM -v ${{ github.workspace }}:/work \
+            python:3.10-slim-bullseye \
             bash -c "
-              /opt/python/cp310-cp310/bin/pip install --upgrade pip &&
-              /opt/python/cp310-cp310/bin/pip install -r /work/tests/requirements.txt pyinstaller &&
+              pip install --upgrade pip --root-user-action=ignore &&
+              pip install -r /work/tests/requirements.txt pyinstaller --root-user-action=ignore &&
               cd /work &&
-              /opt/python/cp310-cp310/bin/pyinstaller main.spec
+              pyinstaller main.spec
             "
 
       - name: Print Executable Version
