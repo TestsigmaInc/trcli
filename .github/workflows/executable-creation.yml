@@ -36,23 +36,38 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.10
+        if: matrix.os != 'ubuntu-latest'
         uses: actions/setup-python@v3
         with:
           python-version: "3.10"
 
       - name: Install dependencies
+        if: matrix.os != 'ubuntu-latest'
         run:  |
           python -m pip install --upgrade pip
           pip install -r tests/requirements.txt
           pip install pyinstaller
 
+      - name: Install dependencies (Linux - Debian 12 to match distroless GLIBC 2.36)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/work \
+            python:3.10-slim-bookworm \
+            bash -c "
+              pip install --upgrade pip &&
+              pip install -r /work/tests/requirements.txt pyinstaller &&
+              cd /work &&
+              pyinstaller main.spec
+            "
+
       - name: Create Executable Using Pyinstaller
+        if: matrix.os != 'ubuntu-latest'
         run: |
           ls
           pwd
           pyinstaller main.spec
           ls dist
-      
+
       - name: Print Executable Version
         run: |
            if [ "${{ matrix.name }}" = "windows" ]; then
