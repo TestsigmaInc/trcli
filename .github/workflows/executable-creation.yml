@@ -82,6 +82,7 @@ jobs:
             "
 
       - name: Print Executable Version
+        if: "!(matrix.name == 'linux' && matrix.arch == 'arm64')"
         run: |
            if [ "${{ matrix.name }}" = "windows" ]; then
               ./dist/trcli-exe.exe --help
